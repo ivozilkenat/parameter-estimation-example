@@ -32,67 +32,67 @@ run_estimators <- function(estimator_list) {
   return(est_result_list)
 }
 
-# Schätzer Erwartungswert
+# Schätzer Varianz
 
 educated_guess_est <- function(sample) {
-  10.5
+  30
 }
 
 arithmetic_mean_est <- function(sample) {
-  mean(sample)
+  mean((sample - mean(sample))^2)
 }
 
 distorted_arithmetic_mean_est <- function(sample) {
-  sum(sample) / (length(sample) - 1)
+  sum((sample - mean(sample))^2) / (length(sample) - 1)
 }
 
 geometric_mean_est <- function(sample) {
-  prod(sample) ^ (1 / length(sample))
+  prod((sample - mean(sample))^2)^(1 / length(sample))
 }
 
 harmonic_mean_est <- function(sample) {
-  length(sample) / sum(1 / sample)
+  length((sample - mean(sample))^2) / sum(1 / sample)
 }
 
 median_est <- function(sample) {
-  median(sample)
+  median((sample - mean(sample))^2)
 }
 
 # Schätzermetriken
 
-mean_and_distance_metric <- function(est_sample, expected_value) {
+mean_and_distance_metric <- function(est_sample, variance) {
   est_mean <- mean(est_sample)
-  abs_dist <- abs(expected_value - est_mean)
+  abs_dist <- abs(variance - est_mean)
   return(list(est_mean = est_mean, abs_dist = abs_dist))
 }
 
 empiric_variance_metric <- function(est_sample) {
   var(est_sample)
-  #mean((est_sample - mean(est_sample))^2)
+  # mean((est_sample - mean(est_sample))^2)
 }
 
-closest_to_parameter_metric <- function(est_result_list, expected_value) {
+closest_to_parameter_metric <- function(est_result_list, variance) {
   count_closests <- setNames(rep(0, length(est_result_list)), names(est_result_list))
 
   for (i in 1:SAMPLE_COUNT) { # TODO: remove magic number
     values_at_i <- sapply(est_result_list, function(vec) vec[i])
-    closest_est <- names(which.min(abs(values_at_i - expected_value)))
+    closest_est <- names(which.min(abs(values_at_i - variance)))
     count_closests[closest_est] <- count_closests[closest_est] + 1
   }
   return(count_closests)
 }
 
-in_interval_metric <- function(est_sample, expected_value) {
-  sum(est_sample >= (expected_value - 1) & est_sample <= (expected_value + 1))
+in_interval_metric <- function(est_sample, variance) {
+  sum(est_sample >= (variance - 1) & est_sample <= (variance + 1))
 }
 
-mse_metric <- function(est_sample, expected_value) {
-  mean((est_sample - expected_value)^2)
+mse_metric <- function(est_sample, variance) {
+  mean((est_sample - variance)^2)
 }
 
 # Calculate Stuff
 
-expected_value <- 10
+variance <- 33.3
 
 estimator_list <- list(
   T1 = educated_guess_est,
@@ -107,13 +107,13 @@ est_result_list <- run_estimators(estimator_list)
 # Metric a)
 for (estimator_nr in names(est_result_list)) {
   est_results <- est_result_list[[estimator_nr]]
-  metric_results <- mean_and_distance_metric(est_results, expected_value)
+  metric_results <- mean_and_distance_metric(est_results, variance)
 
   print(sprintf(
-    "%s - Mittelwert: %f | Abstand zu μ (%g): %f",
+    "%s - Mittelwert: %f | Abstand zu v (%g): %f",
     estimator_nr,
     metric_results$est_mean,
-    expected_value,
+    variance,
     metric_results$abs_dist
   ))
 }
@@ -131,12 +131,12 @@ for (estimator_nr in names(est_result_list)) {
 }
 
 # Metric c)
-closest_list <- closest_to_parameter_metric(est_result_list, expected_value)
+closest_list <- closest_to_parameter_metric(est_result_list, variance)
 for (closest_nr in names(closest_list)) {
   closest_res <- closest_list[[closest_nr]]
 
   print(sprintf(
-    "%s - Am nähsten an μ: %g mal",
+    "%s - Am nähsten an v: %g mal",
     closest_nr,
     closest_res
   ))
@@ -145,10 +145,10 @@ for (closest_nr in names(closest_list)) {
 # Metric d)
 for (estimator_nr in names(est_result_list)) {
   est_results <- est_result_list[[estimator_nr]]
-  metric_result <- in_interval_metric(est_results, expected_value)
+  metric_result <- in_interval_metric(est_results, variance)
 
   print(sprintf(
-    "%s - Im Intervall [μ-1;μ+1]: %g mal",
+    "%s - Im Intervall [v-1;v+1]: %g mal",
     estimator_nr,
     metric_result
   ))
@@ -157,7 +157,7 @@ for (estimator_nr in names(est_result_list)) {
 # Metric e)
 for (estimator_nr in names(est_result_list)) {
   est_results <- est_result_list[[estimator_nr]]
-  metric_result <- mse_metric(est_results, expected_value)
+  metric_result <- mse_metric(est_results, variance)
 
   print(sprintf(
     "%s - emp. MSE: %f",
